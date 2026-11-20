@@ -1,0 +1,124 @@
+{
+  "@@locale": "en",
+  "projectOptions": "Project options",
+  "newBanner": "New banner",
+  "loadExample": "Load example",
+  "exampleBanner": "Example banner",
+  "planBanner": "Plan your banner cuts",
+  "material": "Material",
+  "width": "Width",
+  "height": "Height",
+  "addPhoto": "Add photo",
+  "changePhoto": "Change photo",
+  "removePhoto": "Remove photo",
+  "photoAlignment": "Use a straight-on photo cropped to the edges of the banner.",
+  "pattern": "Pattern",
+  "seamAllowance": "Seam / side",
+  "maxSets": "Max. sets",
+  "optimizePlan": "Optimize plan",
+  "toteBag": "Tote bag",
+  "sleeve": "Sleeve",
+  "front": "Front",
+  "back": "Back",
+  "handleA": "Handle A",
+  "handleB": "Handle B",
+  "flap": "Flap",
+  "cutPlan": "Cut plan",
+  "edit": "Edit",
+  "manual": "Manual",
+  "baseline": "Baseline",
+  "optimized": "Optimized",
+  "markDamage": "Drag on the banner to mark a damaged area.",
+  "deleteArea": "Delete area {number}",
+  "@deleteArea": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "noCompleteSets": "No complete sets fit in this plan.",
+  "inspectPart": "Tap a piece for its dimensions. Hatched areas are excluded.",
+  "nextPiece": "Next piece · {name} · {size}",
+  "@nextPiece": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "placePiece": "Tap where the top-left corner of the piece should go.",
+  "rotate": "Rotate",
+  "undoPiece": "Undo last piece",
+  "manualKitCount": "Complete sets placed manually: {count}",
+  "@manualKitCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "materialUsage": "Material usage",
+  "usageGain": "+{gain} percentage points over the plan without rotations.",
+  "@usageGain": {
+    "placeholders": {
+      "gain": {
+        "type": "String"
+      }
+    }
+  },
+  "sameUsage": "Both plans use the same area.",
+  "completeSets": "{count, plural, one {1 complete set} other {{count} complete sets}}",
+  "@completeSets": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cutList": "Cut list",
+  "cutListDetails": "{count, plural, one {1 piece} other {{count} pieces}} · seam allowance included",
+  "@cutListDetails": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "copyList": "Copy list",
+  "copySuccess": "Cut list copied.",
+  "copyFailure": "Could not copy the cut list.",
+  "cutToSize": "Cut to {size}",
+  "@cutToSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "coordinateOrigin": "Coordinates start at the top-left corner of the banner.",
+  "clipboardInstructions": "Measure from the top-left corner. Dimensions include seam allowance.",
+  "damagedAreaLimit": "You can mark up to 20 damaged areas.",
+  "setLimitReached": "You have reached the maximum number of sets.",
+  "pieceDoesNotFit": "The piece must fit on the banner without overlapping a piece or damaged area.",
+  "photoImported": "Photo added. Mark any damaged areas on the plan.",
+  "photoError": "Could not open the photo. Try a JPG or PNG under 20 MB.",
+  "decimalRange": "{min}–{max} · 1 decimal max.",
+  "@decimalRange": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "choosePhoto": "Choose a banner photo",
+  "open": "Open",
+  "cancel": "Cancel",
+  "photos": "Photos"
+}

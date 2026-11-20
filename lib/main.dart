@@ -4,17 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'banner_canvas.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'planner.dart' as cut;
 
 void main() => runApp(const BannerCut());
 
-class BannerCut extends StatelessWidget {
+class BannerCut extends StatefulWidget {
   const BannerCut({super.key});
+
+  @override
+  State<BannerCut> createState() => _BannerCutState();
+}
+
+class _BannerCutState extends State<BannerCut> {
+  Locale _locale = const Locale('en');
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'BannerCut',
+      locale: _locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -40,22 +51,21 @@ class BannerCut extends StatelessWidget {
           ),
         ),
       ),
-      home: const Workspace(),
+      home: Workspace(
+        onLanguageChanged: (locale) => setState(() => _locale = locale),
+      ),
     );
   }
 }
 
 enum _View { material, manual, reference, optimized }
 
-String _cm(double value) => value == value.roundToDouble()
-    ? value.toStringAsFixed(0)
-    : value.toStringAsFixed(1).replaceAll('.', ',');
-
-String _percent(double value) =>
-    '${(value * 100).toStringAsFixed(1).replaceAll('.', ',')}%';
+enum _MenuAction { newBanner, loadExample, english, romanian }
 
 class Workspace extends StatefulWidget {
-  const Workspace({super.key});
+  const Workspace({super.key, required this.onLanguageChanged});
+
+  final ValueChanged<Locale> onLanguageChanged;
 
   @override
   State<Workspace> createState() => _WorkspaceState();
@@ -88,6 +98,34 @@ class _WorkspaceState extends State<Workspace> {
   int _photoGeneration = 0;
   ui.Image? _photo;
 
+  AppLocalizations get _strings => AppLocalizations.of(context);
+
+  String _decimal(double value, int places) {
+    final formatted = value.toStringAsFixed(places);
+    return _strings.localeName == 'ro'
+        ? formatted.replaceAll('.', ',')
+        : formatted;
+  }
+
+  String _cm(double value) =>
+      _decimal(value, value == value.roundToDouble() ? 0 : 1);
+
+  String _size(double width, double height) =>
+      '${_cm(width)} × ${_cm(height)} cm';
+
+  String _patternLabel(cut.Pattern pattern) => switch (pattern) {
+    cut.Pattern.tote => _strings.toteBag,
+    cut.Pattern.sleeve => _strings.sleeve,
+  };
+
+  String _pieceLabel(cut.Piece piece) => switch (piece.kind) {
+    cut.PieceKind.front => _strings.front,
+    cut.PieceKind.back => _strings.back,
+    cut.PieceKind.handleA => _strings.handleA,
+    cut.PieceKind.handleB => _strings.handleB,
+    cut.PieceKind.flap => _strings.flap,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -109,8 +147,8 @@ class _WorkspaceState extends State<Workspace> {
     _demo = demo;
     _setPhoto(null);
     final size = demo ? _demoSheet : const Size(150, 100);
-    _width.text = _cm(size.width);
-    _height.text = _cm(size.height);
+    _width.text = size.width.toStringAsFixed(0);
+    _height.text = size.height.toStringAsFixed(0);
     _margin.text = '1';
     _limit.text = '12';
     _pattern = cut.Pattern.tote;
@@ -187,7 +225,7 @@ class _WorkspaceState extends State<Workspace> {
 
   void _addDefect(Rect rect) {
     if (_defects.length >= 20) {
-      _notice('Poți marca până la 20 de zone deteriorate.');
+      _notice(_strings.damagedAreaLimit);
       return;
     }
     _updateDefects([..._defects, rect]);
@@ -198,13 +236,13 @@ class _WorkspaceState extends State<Workspace> {
   void _placeManually(Offset origin) {
     if (!(_form.currentState?.validate() ?? false)) return;
     if (_manualKits >= int.parse(_limit.text)) {
-      _notice('Ai atins numărul maxim de seturi.');
+      _notice(_strings.setLimitReached);
       return;
     }
     final index = _manual.length % _pattern.pieces.length;
     final rect = _planner.pieceAt(index, origin, rotate: _rotateManual);
     if (!_planner.canPlace(rect, _manual)) {
-      _notice('Piesa trebuie să încapă în banner, fără suprapuneri.');
+      _notice(_strings.pieceDoesNotFit);
       return;
     }
     setState(() {
@@ -226,7 +264,12 @@ class _WorkspaceState extends State<Workspace> {
     setState(() => _picking = true);
     final generation = ++_photoGeneration;
     try {
-      final data = await _picker.invokeMethod<Uint8List>('pickPhoto');
+      final data = await _picker.invokeMethod<Uint8List>('pickPhoto', {
+        'title': _strings.choosePhoto,
+        'open': _strings.open,
+        'cancel': _strings.cancel,
+        'filter': _strings.photos,
+      });
       if (data == null || !mounted || generation != _photoGeneration) return;
       final buffer = await ui.ImmutableBuffer.fromUint8List(data);
       final ui.ImageDescriptor descriptor;
@@ -253,7 +296,7 @@ class _WorkspaceState extends State<Workspace> {
             _setPhoto(frame.image);
             _view = _View.material;
           });
-          _notice('Fotografie adăugată. Marchează zonele deteriorate pe plan.');
+          _notice(_strings.photoImported);
         } finally {
           codec.dispose();
         }
@@ -263,9 +306,7 @@ class _WorkspaceState extends State<Workspace> {
       }
     } catch (_) {
       if (mounted && generation == _photoGeneration) {
-        _notice(
-          'Fotografia nu a putut fi deschisă. Încearcă un JPG sau PNG sub 20 MB.',
-        );
+        _notice(_strings.photoError);
       }
     } finally {
       if (mounted) setState(() => _picking = false);
@@ -284,27 +325,26 @@ class _WorkspaceState extends State<Workspace> {
       return kitOrder != 0 ? kitOrder : a.pieceIndex.compareTo(b.pieceIndex);
     });
 
-  String _cutSize(cut.Cut part) =>
-      '${_cm(part.rect.width)} × ${_cm(part.rect.height)} cm';
+  String _cutSize(cut.Cut part) => _size(part.rect.width, part.rect.height);
   String _cutPosition(cut.Cut part) =>
       'X ${_cm(part.rect.left)} cm · Y ${_cm(part.rect.top)} cm';
 
   Future<void> _copy(cut.CutPlan plan) async {
     final header =
-        'BannerCut · ${_pattern.label} · ${plan.kits} set(uri)\n'
-        'Origine: colțul stânga-sus. Dimensiunile includ marja de cusătură.\n';
+        'BannerCut · ${_patternLabel(_pattern)} · ${_strings.completeSets(plan.kits)}\n'
+        '${_strings.clipboardInstructions}\n';
     final rows = _ordered(plan).map(
       (part) =>
-          '${part.code} · ${_pattern.pieces[part.pieceIndex].name} · '
+          '${part.code} · ${_pieceLabel(_pattern.pieces[part.pieceIndex])} · '
           '${_cutSize(part)} · ${_cutPosition(part)}',
     );
     try {
       await Clipboard.setData(
         ClipboardData(text: '$header\n${rows.join('\n')}'),
       );
-      if (mounted) _notice('Lista de tăiere a fost copiată.');
+      if (mounted) _notice(_strings.copySuccess);
     } on PlatformException {
-      if (mounted) _notice('Lista nu a putut fi copiată.');
+      if (mounted) _notice(_strings.copyFailure);
     }
   }
 
@@ -319,16 +359,16 @@ class _WorkspaceState extends State<Workspace> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${part.code} · ${_pattern.pieces[part.pieceIndex].name}',
+              '${part.code} · ${_pieceLabel(_pattern.pieces[part.pieceIndex])}',
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            Text('Taie la ${_cutSize(part)}'),
+            Text(_strings.cutToSize(_cutSize(part))),
             Text(_cutPosition(part)),
             const SizedBox(height: 8),
-            const Text(
-              'Coordonatele pornesc din colțul stânga-sus al bannerului.',
-              style: TextStyle(color: muted),
+            Text(
+              _strings.coordinateOrigin,
+              style: const TextStyle(color: muted),
             ),
           ],
         ),
@@ -424,16 +464,30 @@ class _WorkspaceState extends State<Workspace> {
               ),
             ),
             const Spacer(),
-            PopupMenuButton<bool>(
-              tooltip: 'Opțiuni proiect',
+            PopupMenuButton<_MenuAction>(
+              tooltip: _strings.projectOptions,
               icon: const Icon(Icons.more_horiz),
-              onSelected: (demo) {
-                setState(() => _load(demo: demo));
-                if (demo) _generate(showResults: false);
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: false, child: Text('Banner nou')),
-                PopupMenuItem(value: true, child: Text('Încarcă exemplul')),
+              onSelected: _selectMenuAction,
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: _MenuAction.newBanner,
+                  child: Text(_strings.newBanner),
+                ),
+                PopupMenuItem(
+                  value: _MenuAction.loadExample,
+                  child: Text(_strings.loadExample),
+                ),
+                const PopupMenuDivider(),
+                CheckedPopupMenuItem(
+                  value: _MenuAction.english,
+                  checked: _strings.localeName == 'en',
+                  child: const Text('English'),
+                ),
+                CheckedPopupMenuItem(
+                  value: _MenuAction.romanian,
+                  checked: _strings.localeName == 'ro',
+                  child: const Text('Română'),
+                ),
               ],
             ),
           ],
@@ -441,6 +495,20 @@ class _WorkspaceState extends State<Workspace> {
       ),
     ),
   );
+
+  void _selectMenuAction(_MenuAction action) {
+    switch (action) {
+      case _MenuAction.newBanner:
+        setState(() => _load(demo: false));
+      case _MenuAction.loadExample:
+        _load(demo: true);
+        _generate(showResults: false);
+      case _MenuAction.english:
+        widget.onLanguageChanged(const Locale('en'));
+      case _MenuAction.romanian:
+        widget.onLanguageChanged(const Locale('ro'));
+    }
+  }
 
   Widget _intro(bool wide) => Container(
     decoration: BoxDecoration(
@@ -455,7 +523,7 @@ class _WorkspaceState extends State<Workspace> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _demo ? 'Banner demonstrativ' : 'Banner nou',
+          _demo ? _strings.exampleBanner : _strings.newBanner,
           style: const TextStyle(
             color: lime,
             fontSize: 12,
@@ -464,7 +532,7 @@ class _WorkspaceState extends State<Workspace> {
         ),
         const SizedBox(height: 4),
         Text(
-          'Planifică tăierea bannerului',
+          _strings.planBanner,
           style: TextStyle(
             color: Colors.white,
             fontSize: wide ? 32 : 23,
@@ -484,13 +552,15 @@ class _WorkspaceState extends State<Workspace> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _Heading(Icons.straighten_rounded, 'Material'),
+            _Heading(Icons.straighten_rounded, _strings.material),
             const SizedBox(height: 13),
             Row(
               children: [
-                Expanded(child: _field(_width, 'Lățime', 'cm', 10, 1000)),
+                Expanded(child: _field(_width, _strings.width, 'cm', 10, 1000)),
                 const SizedBox(width: 8),
-                Expanded(child: _field(_height, 'Înălțime', 'cm', 10, 1000)),
+                Expanded(
+                  child: _field(_height, _strings.height, 'cm', 10, 1000),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -498,7 +568,7 @@ class _WorkspaceState extends State<Workspace> {
               onPressed: _picking ? null : _importPhoto,
               icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
               label: Text(
-                _photo == null ? 'Adaugă fotografie' : 'Schimbă fotografia',
+                _photo == null ? _strings.addPhoto : _strings.changePhoto,
               ),
             ),
             if (_photo != null)
@@ -507,17 +577,17 @@ class _WorkspaceState extends State<Workspace> {
                   _photoGeneration++;
                   _setPhoto(null);
                 }),
-                child: const Text('Elimină fotografia'),
+                child: Text(_strings.removePhoto),
               ),
-            const Text(
-              'Pentru aliniere, folosește o fotografie frontală, decupată la marginile bannerului.',
-              style: TextStyle(fontSize: 12, color: muted),
+            Text(
+              _strings.photoAlignment,
+              style: const TextStyle(fontSize: 12, color: muted),
             ),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 12),
               child: Divider(),
             ),
-            const _Heading(Icons.layers_outlined, 'Șablon'),
+            _Heading(Icons.layers_outlined, _strings.pattern),
             const SizedBox(height: 11),
             for (final option in cut.Pattern.values) ...[
               _patternChoice(option),
@@ -526,12 +596,14 @@ class _WorkspaceState extends State<Workspace> {
             const SizedBox(height: 7),
             Row(
               children: [
-                Expanded(child: _field(_margin, 'Marjă / latură', 'cm', 0, 5)),
+                Expanded(
+                  child: _field(_margin, _strings.seamAllowance, 'cm', 0, 5),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: _field(
                     _limit,
-                    'Max. seturi',
+                    _strings.maxSets,
                     '',
                     1,
                     25,
@@ -550,7 +622,7 @@ class _WorkspaceState extends State<Workspace> {
                 _generate();
               },
               icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
-              label: const Text('Optimizează planul'),
+              label: Text(_strings.optimizePlan),
             ),
           ],
         ),
@@ -583,7 +655,7 @@ class _WorkspaceState extends State<Workspace> {
       if (value == null || value < minimum || value > maximum) {
         return integer
             ? '$minimum–$maximum'
-            : '$minimum–$maximum · max. 1 zecimală';
+            : _strings.decimalRange(minimum, maximum);
       }
       return null;
     },
@@ -621,11 +693,14 @@ class _WorkspaceState extends State<Workspace> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    option.label,
+                    _patternLabel(option),
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                   Text(
-                    option.size,
+                    _size(
+                      option.pieces.first.width,
+                      option.pieces.first.height,
+                    ),
                     style: const TextStyle(fontSize: 12, color: muted),
                   ),
                 ],
@@ -664,14 +739,14 @@ class _WorkspaceState extends State<Workspace> {
                 children: [
                   Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: _Heading(
                           Icons.grid_4x4_rounded,
-                          'Plan de tăiere',
+                          _strings.cutPlan,
                         ),
                       ),
                       Text(
-                        '${_cm(_planner.size.width)} × ${_cm(_planner.size.height)} cm',
+                        _size(_planner.size.width, _planner.size.height),
                         style: const TextStyle(color: muted, fontSize: 12),
                       ),
                     ],
@@ -681,10 +756,10 @@ class _WorkspaceState extends State<Workspace> {
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      _viewChip('Editează', _View.material, true),
-                      _viewChip('Manual', _View.manual, true),
-                      _viewChip('Referință', _View.reference, ready),
-                      _viewChip('Optimizat', _View.optimized, ready),
+                      _viewChip(_strings.edit, _View.material, true),
+                      _viewChip(_strings.manual, _View.manual, true),
+                      _viewChip(_strings.baseline, _View.reference, ready),
+                      _viewChip(_strings.optimized, _View.optimized, ready),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -707,9 +782,9 @@ class _WorkspaceState extends State<Workspace> {
                   ),
                   const SizedBox(height: 9),
                   if (editing) ...[
-                    const Text(
-                      'Trage pe banner pentru a marca o zonă deteriorată.',
-                      style: TextStyle(color: muted, fontSize: 12),
+                    Text(
+                      _strings.markDamage,
+                      style: const TextStyle(color: muted, fontSize: 12),
                     ),
                     if (_defects.isNotEmpty)
                       Wrap(
@@ -718,11 +793,12 @@ class _WorkspaceState extends State<Workspace> {
                           for (final (index, rect) in _defects.indexed)
                             InputChip(
                               label: Text(
-                                'D${index + 1} · ${_cm(rect.width)} × ${_cm(rect.height)} cm',
+                                'D${index + 1} · ${_size(rect.width, rect.height)}',
                                 style: const TextStyle(fontSize: 11),
                               ),
-                              deleteButtonTooltipMessage:
-                                  'Șterge zona ${index + 1}',
+                              deleteButtonTooltipMessage: _strings.deleteArea(
+                                index + 1,
+                              ),
                               onDeleted: () => _updateDefects(
                                 [..._defects]..removeAt(index),
                               ),
@@ -734,8 +810,8 @@ class _WorkspaceState extends State<Workspace> {
                   else
                     Text(
                       plan.cuts.isEmpty
-                          ? 'Nu încape niciun set complet în acest plan.'
-                          : 'Atinge o piesă pentru cote. Zonele hașurate sunt excluse.',
+                          ? _strings.noCompleteSets
+                          : _strings.inspectPart,
                       style: const TextStyle(color: muted, fontSize: 12),
                     ),
                 ],
@@ -760,12 +836,12 @@ class _WorkspaceState extends State<Workspace> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Următoarea piesă · ${part.name} · ${_cm(rect.width)} × ${_cm(rect.height)} cm',
+          _strings.nextPiece(_pieceLabel(part), _size(rect.width, rect.height)),
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
         ),
-        const Text(
-          'Atinge locul unde vrei să fie colțul stânga-sus al piesei.',
-          style: TextStyle(color: muted, fontSize: 12),
+        Text(
+          _strings.placePiece,
+          style: const TextStyle(color: muted, fontSize: 12),
         ),
         Wrap(
           spacing: 8,
@@ -773,7 +849,7 @@ class _WorkspaceState extends State<Workspace> {
             TextButton.icon(
               onPressed: () => setState(() => _rotateManual = !_rotateManual),
               icon: const Icon(Icons.rotate_right, size: 17),
-              label: const Text('Rotește'),
+              label: Text(_strings.rotate),
             ),
             TextButton.icon(
               onPressed: _manual.isEmpty
@@ -783,12 +859,12 @@ class _WorkspaceState extends State<Workspace> {
                       _rotateManual = false;
                     }),
               icon: const Icon(Icons.undo, size: 17),
-              label: const Text('Retrage ultima piesă'),
+              label: Text(_strings.undoPiece),
             ),
           ],
         ),
         Text(
-          'Seturi complete așezate manual: $_manualKits',
+          _strings.manualKitCount(_manualKits),
           style: const TextStyle(color: muted, fontSize: 12),
         ),
       ],
@@ -819,19 +895,19 @@ class _WorkspaceState extends State<Workspace> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _Heading(Icons.bar_chart_rounded, 'Utilizarea materialului'),
+            _Heading(Icons.bar_chart_rounded, _strings.materialUsage),
             const SizedBox(height: 10),
             Row(
               children: [
-                Expanded(child: _metric('Referință', reference, false)),
+                Expanded(child: _metric(_strings.baseline, reference, false)),
                 const SizedBox(width: 8),
-                Expanded(child: _metric('Optimizat', optimized, true)),
+                Expanded(child: _metric(_strings.optimized, optimized, true)),
               ],
             ),
             if (_manualKits > 0) ...[
               const SizedBox(height: 8),
               _metric(
-                'Manual',
+                _strings.manual,
                 cut.CutPlan(
                   _manual.take(_manualKits * _pattern.pieces.length).toList(),
                   _manualKits,
@@ -842,8 +918,8 @@ class _WorkspaceState extends State<Workspace> {
             const SizedBox(height: 8),
             Text(
               delta > 0
-                  ? '+${(delta * 100).toStringAsFixed(1).replaceAll('.', ',')} puncte procentuale față de așezarea fără rotații.'
-                  : 'Ambele planuri folosesc aceeași suprafață.',
+                  ? _strings.usageGain(_decimal(delta * 100, 1))
+                  : _strings.sameUsage,
               style: const TextStyle(color: muted, fontSize: 12),
             ),
           ],
@@ -863,7 +939,7 @@ class _WorkspaceState extends State<Workspace> {
       children: [
         Text(label, style: const TextStyle(color: muted, fontSize: 12)),
         Text(
-          _percent(_planner.usage(plan)),
+          '${_decimal(_planner.usage(plan) * 100, 1)}%',
           style: const TextStyle(
             fontWeight: FontWeight.w900,
             fontSize: 24,
@@ -871,7 +947,7 @@ class _WorkspaceState extends State<Workspace> {
           ),
         ),
         Text(
-          plan.kits == 1 ? '1 set complet' : '${plan.kits} seturi complete',
+          _strings.completeSets(plan.kits),
           style: const TextStyle(color: muted, fontSize: 12),
         ),
       ],
@@ -880,25 +956,25 @@ class _WorkspaceState extends State<Workspace> {
 
   Widget _cutList(cut.CutPlan plan) => _Panel(
     child: ExpansionTile(
-      title: const Text(
-        'Listă de tăiere',
-        style: TextStyle(fontWeight: FontWeight.w800),
+      title: Text(
+        _strings.cutList,
+        style: const TextStyle(fontWeight: FontWeight.w800),
       ),
-      subtitle: Text('${plan.cuts.length} piese · marjă inclusă'),
+      subtitle: Text(_strings.cutListDetails(plan.cuts.length)),
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: TextButton.icon(
             onPressed: () => _copy(plan),
             icon: const Icon(Icons.copy_outlined, size: 16),
-            label: const Text('Copiază lista'),
+            label: Text(_strings.copyList),
           ),
         ),
         for (final part in _ordered(plan))
           ListTile(
             dense: true,
             title: Text(
-              '${part.code} · ${_pattern.pieces[part.pieceIndex].name}',
+              '${part.code} · ${_pieceLabel(_pattern.pieces[part.pieceIndex])}',
             ),
             subtitle: Text(_cutPosition(part)),
             trailing: Text(_cutSize(part)),

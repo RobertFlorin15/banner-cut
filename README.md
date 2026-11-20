@@ -1,10 +1,10 @@
 # BannerCut
 
-Aplicație Flutter pentru planificarea tăierii bannerelor recuperate. Disponibilă ca proiect nativ pentru Android, iOS și Linux.
+BannerCut is a native Flutter app that helps you turn discarded event banners into tote bags and sleeves. It plans cuts around damaged areas so you can recover more usable material. The project supports Android, iOS, and Linux.
 
-## Rulează local
+## Run locally
 
-Folosește Flutter 3.44.8 sau o versiune compatibilă cu Dart 3.12.2.
+Use Flutter 3.44.8 or a Flutter release that meets the Dart 3.12.2 SDK constraint in `pubspec.yaml`. Run these commands from the project root.
 
 ```sh
 flutter pub get
@@ -12,29 +12,31 @@ flutter devices
 flutter run -d <device-id>
 ```
 
-Pentru Android, conectează un telefon cu depanare USB sau pornește un emulator. Poți genera un APK pentru testare cu `flutter build apk --debug`. Pentru iOS ai nevoie de macOS cu Xcode, iar importul din galerie cere iOS 14 sau mai nou. Pentru aplicația desktop, rulează `flutter run -d linux` pe Linux.
+- **Linux** — Run `flutter run -d linux` from a terminal in your desktop session.
+- **Android** — Start an emulator or connect a phone with USB debugging enabled. To build an APK for testing, run `flutter build apk --debug`.
+- **iOS** — Use macOS with Xcode and an iOS device or simulator running iOS 14 or later.
 
-## Fluxul aplicației
+## Plan a cut
 
-1. Deschide exemplul preîncărcat sau alege **Banner nou** din meniu. Introdu lățimea și înălțimea în centimetri.
-2. Opțional, importă o fotografie frontală, decupată la marginile bannerului. În **Editează**, desenează dreptunghiuri peste defecte și șterge-le individual dacă e nevoie.
-3. Alege **Sacoșă** sau **Husă**, marja pe fiecare latură și numărul maxim de seturi pe care le cauți.
-4. În **Manual**, atinge colțul stânga-sus în care vrei să pui următoarea piesă. Poți roti piesa înainte de plasare sau retrage ultima piesă.
-5. Apasă **Optimizează planul**. Compară rezultatul cu așezarea de referință fără rotații și cu planul manual, dacă ai așezat cel puțin un set complet. Atinge o piesă pentru a vedea dimensiunile de tăiere și poziția față de colțul stânga-sus al bannerului. Poți copia lista completă de cote din **Listă de tăiere**.
+1. Explore the preloaded example or select **New banner** from the project menu. Enter the banner's width and height in centimeters.
+2. Optionally add a straight-on photo cropped to the banner's edges. In **Edit**, drag rectangles over damaged areas. You can remove individual areas as needed.
+3. Choose a **Tote bag** or **Sleeve** pattern. Set the seam allowance per side and the maximum number of complete sets.
+4. In **Manual**, tap where the top-left corner of the next piece should go. You can rotate the piece before placing it or undo the last placement.
+5. Select **Optimize plan**. Compare it with the **Baseline** layout without rotations and with your manual layout once it has a complete set. Tap a piece to see its dimensions and its position relative to the banner's top-left corner. Open **Cut list** to copy all dimensions and coordinates.
 
-Aplicația procesează local fotografia și geometria. Sesiunea curentă este ținută în memorie. Când schimbi materialul, șablonul, marja sau limita, aplicația recalculează geometria materialului și golește planurile existente. Defectele sunt dreptunghiuri, iar fotografia servește drept reper vizual.
+BannerCut starts in English. Choose **Română** from the project menu to switch languages during the session. Photos and plans are processed locally and kept in memory for the current session. Changing the dimensions, pattern, seam allowance, set limit, or damaged areas clears the existing layouts.
 
-## Optimizare și indicatori
+## Optimization and impact
 
-Planificatorul împarte spațiul disponibil în dreptunghiuri libere după fiecare zonă deteriorată sau piesă plasată. Încearcă ordini diferite pentru piese, mai multe criterii de alegere a spațiului și rotații de 90°. Păstrează planul cu cele mai multe seturi complete dintre cele încercate. Metoda este euristică.
+The planner splits the available space into rectangles around damaged areas and placed pieces. It tries several piece orders and placement rules, with optional 90° rotations, and keeps the best layout it finds by complete set count. This is a heuristic.
 
-Indicatorul din interfață împarte suprafața pieselor din seturile complete, cu marja inclusă, la suprafața utilizabilă a bannerului. Zonele deteriorate care se suprapun sunt scăzute o singură dată. Pentru măsurarea impactului fizic se poate cântări materialul rămas după tăiere pe bannere comparabile, folosind același șablon și aceeași marjă.
+**Material usage** is the area of the pieces in complete sets, including seam allowances, divided by the usable banner area. Overlapping damaged areas are counted once. To measure physical waste, weigh the offcuts from comparable banners cut with the same pattern and seam allowance.
 
-## Verificare
+## Checks
 
 ```sh
 flutter analyze
 flutter test
 ```
 
-Testele acoperă suprapunerea defectelor, rotația pieselor, marginile de cusătură, seturile incomplete și fluxurile de editare și optimizare în interfață.
+Tests cover damaged-area overlaps, piece rotation, seam allowances, incomplete sets, and the editing, optimization, and language-switching flows.

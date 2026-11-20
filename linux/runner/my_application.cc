@@ -56,16 +56,29 @@ static void photo_selected(GtkNativeDialog* dialog, gint response, gpointer data
   g_object_unref(dialog);
 }
 
+static const char* photo_label(FlValue* args, const char* key,
+                               const char* fallback) {
+  if (args == nullptr || fl_value_get_type(args) != FL_VALUE_TYPE_MAP) {
+    return fallback;
+  }
+  FlValue* value = fl_value_lookup_string(args, key);
+  return value != nullptr && fl_value_get_type(value) == FL_VALUE_TYPE_STRING
+             ? fl_value_get_string(value)
+             : fallback;
+}
+
 static void handle_photo_call(FlMethodChannel*, FlMethodCall* call, gpointer data) {
   if (g_strcmp0(fl_method_call_get_name(call), "pickPhoto") != 0) {
     fl_method_call_respond_not_implemented(call, nullptr);
     return;
   }
+  FlValue* args = fl_method_call_get_args(call);
   auto* dialog = gtk_file_chooser_native_new(
-      "Alege fotografia bannerului", GTK_WINDOW(data),
-      GTK_FILE_CHOOSER_ACTION_OPEN, "Deschide", "Anulează");
+      photo_label(args, "title", "Choose a banner photo"), GTK_WINDOW(data),
+      GTK_FILE_CHOOSER_ACTION_OPEN, photo_label(args, "open", "Open"),
+      photo_label(args, "cancel", "Cancel"));
   GtkFileFilter* filter = gtk_file_filter_new();
-  gtk_file_filter_set_name(filter, "Fotografii");
+  gtk_file_filter_set_name(filter, photo_label(args, "filter", "Photos"));
   gtk_file_filter_add_pixbuf_formats(filter);
   gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
   gtk_native_dialog_set_modal(GTK_NATIVE_DIALOG(dialog), TRUE);

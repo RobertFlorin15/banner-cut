@@ -1,29 +1,29 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+enum PieceKind { front, back, handleA, handleB, flap }
+
 class Piece {
-  const Piece(this.name, this.width, this.height);
-  final String name;
+  const Piece(this.kind, this.width, this.height);
+  final PieceKind kind;
   final double width;
   final double height;
 }
 
 enum Pattern {
-  tote('Sacoșă', '30 × 34 cm', [
-    Piece('Față', 30, 34),
-    Piece('Spate', 30, 34),
-    Piece('Mâner A', 5, 50),
-    Piece('Mâner B', 5, 50),
+  tote([
+    Piece(PieceKind.front, 30, 34),
+    Piece(PieceKind.back, 30, 34),
+    Piece(PieceKind.handleA, 5, 50),
+    Piece(PieceKind.handleB, 5, 50),
   ]),
-  sleeve('Husă', '24 × 32 cm', [
-    Piece('Față', 24, 32),
-    Piece('Spate', 24, 32),
-    Piece('Clapetă', 24, 9),
+  sleeve([
+    Piece(PieceKind.front, 24, 32),
+    Piece(PieceKind.back, 24, 32),
+    Piece(PieceKind.flap, 24, 9),
   ]);
 
-  const Pattern(this.label, this.size, this.pieces);
-  final String label;
-  final String size;
+  const Pattern(this.pieces);
   final List<Piece> pieces;
 }
 
